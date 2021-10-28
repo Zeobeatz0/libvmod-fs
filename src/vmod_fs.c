@@ -22,7 +22,7 @@ const char *nfound_html = "HTTP/1.1 404\r\n"
 						  "Content-Length: 86\r\n\r\n"
 						  "<h3>404 Not Found</h3><br>"
 						  "<a href=\"https://github.com/mrrva/libvmod-fs\">libvmod-fs</a>";
-const char *errors_html = "HTTP/1.1 404\r\n"
+const char *errors_html = "HTTP/1.1 500\r\n"
 						  "Content-Type: text/html; charset=utf-8\r\n"
 						  "Content-Length: 92\r\n\r\n"
 						  "<h3>Unable to read file</h3><br>"
@@ -42,7 +42,7 @@ const char *doc_headers = "HTTP/1.1 200\r\n"
 						  "Content-Length: %ld\r\n\r\n";
 void *server_thread(void *);
 bool work_thread_ = true;
-char *path_ = NULL, *regex_;
+char *path_ = NULL, *regex_ = NULL;
 pthread_t thread_;
 int max_threads_;
 atomic_int threads_ = 0;
@@ -164,7 +164,7 @@ void *client_thread(void *args) {
 	free(full);
 
 	if (!fp) {
-		send(sock, errors_html, strlen(errors_html), SF);
+		send(sock, nfound_html, strlen(nfound_html), SF);
 		goto _client_thread_exit;
 	}
 
