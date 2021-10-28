@@ -2,7 +2,7 @@
 #include "config.h"
 #include "cache/cache.h"
 #include "vtim.h"
-#include "vcc_example_if.h"
+#include "vcc_fs_if.h"
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
