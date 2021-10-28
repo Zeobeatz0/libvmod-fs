@@ -1,0 +1,23 @@
+#
+# Copyright @mrrva (c) 2021.
+# Varnish File System
+#
+
+$Module fs 3 Fs VMOD
+
+DESCRIPTION
+===========
+
+This is the embedded documentation for the fs VMOD. It should
+mention what the vmod is intended to do.
+
+It can span multiple lines and is written in RST format.
+You can even have links and lists in here:
+
+* https://github.com/varnish/libvmod-fs/
+* https://www.varnish-cache.org/
+
+$Event event_function
+$Function STRING dir()
+$Function BOOL work()
+$Function VOID init(STRING, STRING, INT)
