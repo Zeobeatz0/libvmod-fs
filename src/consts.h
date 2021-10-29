@@ -20,12 +20,12 @@ const char *connect_tmp = "HTTP/1.1 500\r\n"
 						  "Content-Length: 113\r\n\r\n"
 						  "<h3>Threads limit exceeded, please try later</h3><br>"
 						  "<a href=\"https://github.com/mrrva/libvmod-fs\">libvmod-fs</a>";
-const char *doc_headers = "HTTP/1.1 200\r\n"
-						  "Content-Description: File Transfer\r\n"
+const char *doc_headers = "HTTP/1.1 200 OK\r\n"
 						  "Content-Type: %s\r\n"
-						  "Content-Disposition: attachment; filename=%s\r\n"
-						  "Expires: 0\r\n"
+						  "Server: varnish\r\n"
 						  "Cache-Control: must-revalidate\r\n"
+						  "Connection: keep-alive\r\n"
+						  "Accept-Ranges: bytes\r\n"
 						  "Pragma: public\r\n"
 						  "Content-Length: %ld\r\n\r\n";
 struct extable {
@@ -378,7 +378,7 @@ struct extable {
   {"yin", "application/yin+xml"},
   {"yml", "text/yaml"},
   {"zip", "application/zip"},
-  {"m3u8", "application/x-mpegURL"}
+  {"m3u8", "application/vnd.apple.mpegurl"}
 };
 
 #endif
