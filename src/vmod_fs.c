@@ -158,7 +158,7 @@ void *client_thread(void *args) {
 
 	strcpy(full_path, path_);
 	strcat(full_path, r_tmp);
-	FILE *fp = fopen(full_path, "rb+");
+	FILE *fp = fopen(full_path, "rb");
 
 	free(full_path);
 	free(full);
