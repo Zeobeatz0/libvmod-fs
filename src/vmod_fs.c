@@ -3,6 +3,7 @@
 #include "cache/cache.h"
 #include "vtim.h"
 #include "vcc_fs_if.h"
+#include "consts.h"
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -13,33 +14,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <unistd.h>
-#define FREE_IF(ptr) if ((ptr)) { free((ptr)); (ptr) = NULL; }
-#define SF MSG_NOSIGNAL
-#define PORT 1377
 
-const char *nfound_html = "HTTP/1.1 404\r\n"
-						  "Content-Type: text/html; charset=utf-8\r\n"
-						  "Content-Length: 86\r\n\r\n"
-						  "<h3>404 Not Found</h3><br>"
-						  "<a href=\"https://github.com/mrrva/libvmod-fs\">libvmod-fs</a>";
-const char *errors_html = "HTTP/1.1 500\r\n"
-						  "Content-Type: text/html; charset=utf-8\r\n"
-						  "Content-Length: 92\r\n\r\n"
-						  "<h3>Unable to read file</h3><br>"
-						  "<a href=\"https://github.com/mrrva/libvmod-fs\">libvmod-fs</a>";
-const char *connect_tmp = "HTTP/1.1 500\r\n"
-						  "Content-Type: text/html; charset=utf-8\r\n"
-						  "Content-Length: 113\r\n\r\n"
-						  "<h3>Threads limit exceeded, please try later</h3><br>"
-						  "<a href=\"https://github.com/mrrva/libvmod-fs\">libvmod-fs</a>";
-const char *doc_headers = "HTTP/1.1 200\r\n"
-						  "Content-Description: File Transfer\r\n"
-						  "Content-Type: application/octet-stream\r\n"
-						  "Content-Disposition: attachment; filename=%s\r\n"
-						  "Expires: 0\r\n"
-						  "Cache-Control: must-revalidate\r\n"
-						  "Pragma: public\r\n"
-						  "Content-Length: %ld\r\n\r\n";
 void *server_thread(void *);
 bool work_thread_ = true;
 char *path_ = NULL, *regex_ = NULL;
@@ -72,6 +47,46 @@ int v_matchproto_(vmod_event_f) vmod_event_function(VRT_CTX, struct vmod_priv *p
 	}
 
 	return 0;
+}
+
+char *mime_type(char *name) {
+	char *def = "application/octet-stream", *tmp;
+
+	if (strlen(name) < 3) {
+		return def;
+	}
+
+	while ((tmp = strchr(name, '.'))) {
+		name = ++tmp;
+	}
+
+	size_t size = strlen(name);
+
+	for (int i = 0; i < EXNUMBER; i++) {
+		if (strlen(ex_table[i].name) == size && strcmp(name, ex_table[i].name) == 0) {
+			return ex_table[i].mime;
+		}
+	}
+
+	return def;
+}
+
+bool send_full(const int sock, const char *txt, int size) {
+	int step = 0, ret;
+
+	if (!size) {
+		return true;
+	}
+
+	while ((ret = send(sock, txt + step, size, MSG_NOSIGNAL)) != size) {
+		if (ret <= 0) {
+			return false;
+		}
+		step += ret;
+		size -= ret;
+	}
+
+	return true;
 }
 
 VCL_VOID vmod_init(VRT_CTX, VCL_STRING path, VCL_STRING url, VCL_INT max_connections) {
@@ -139,7 +154,7 @@ void *client_thread(void *args) {
 	}
 
 	if (!path_ || !regex_) {
-		send(sock, errors_html, strlen(errors_html), SF);
+		send_full(sock, errors_html, strlen(errors_html));
 		goto _client_thread_exit;
 	}
 
@@ -147,7 +162,7 @@ void *client_thread(void *args) {
 	sscanf(full, regex_, r_tmp);
 
 	if (strlen(r_tmp) < 4) {
-		send(sock, nfound_html, strlen(nfound_html), SF);
+		send_full(sock, nfound_html, strlen(nfound_html));
 		goto _client_thread_exit;
 	}
 
@@ -162,9 +177,10 @@ void *client_thread(void *args) {
 
 	free(full_path);
 	free(full);
+	full = NULL;
 
 	if (!fp) {
-		send(sock, nfound_html, strlen(nfound_html), SF);
+		send_full(sock, nfound_html, strlen(nfound_html));
 		goto _client_thread_exit;
 	}
 
@@ -172,28 +188,19 @@ void *client_thread(void *args) {
 	size_t size = ftell(fp);
 	rewind(fp);
 
-	full = (char *)malloc(strlen(doc_headers) + strlen(r_tmp) + 15);
+	char *mime = mime_type(r_tmp);
+	size_t flen = strlen(doc_headers) + strlen(r_tmp) + strlen(mime);
+	full = (char *)malloc(flen + 15);
+
 	if (!full || size > 10000000000) {
 		goto _fp_client_thread_exit;
 	}
 
-	sprintf(full, doc_headers, r_tmp, size);
-	send(sock, full, strlen(full), SF);
-	flag = false;
+	sprintf(full, doc_headers, mime, r_tmp, size);
+	send_full(sock, full, strlen(full));
 
 	while ((ret = fread(r_tmp, sizeof(char), 100, fp))) {
-		int step = 0, sret;
-		
-		while ((sret = send(sock, r_tmp + step, ret, SF)) != ret) {
-			if (sret <= 0) {
-				flag = true;
-				break;
-			}
-
-			step += sret;
-			ret  -= sret;
-		}
-		if (flag) {
+		if (!send_full(sock, r_tmp, ret)) {
 			break;
 		}
 	}
@@ -236,7 +243,7 @@ void *server_thread(void *args) {
 	while (work_thread_) {
 		if ((bs = accept(sock, cptr, &size)) >= 0) {
 			if (threads_ >= max_threads_) {
-				send(bs, connect_tmp, strlen(connect_tmp), SF);
+				send_full(bs, connect_tmp, strlen(connect_tmp));
 				close_sock(bs);
 				continue;
 			}
