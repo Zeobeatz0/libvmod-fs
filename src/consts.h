@@ -1,7 +1,7 @@
 
 #ifndef _VMOD_FS_EXTENSIONS_
 #define _VMOD_FS_EXTENSIONS_
-#define EXNUMBER 347
+#define EXNUMBER 348
 #define FREE_IF(ptr) if ((ptr)) { free((ptr)); (ptr) = NULL; }
 #define PORT 1377
 
@@ -22,8 +22,6 @@ const char *connect_tmp = "HTTP/1.1 500\r\n"
 						  "<a href=\"https://github.com/mrrva/libvmod-fs\">libvmod-fs</a>";
 const char *doc_headers = "HTTP/1.1 200 OK\r\n"
 						  "Content-Type: %s\r\n"
-						  "Server: varnish\r\n"
-						  "Cache-Control: must-revalidate\r\n"
 						  "Connection: keep-alive\r\n"
 						  "Accept-Ranges: bytes\r\n"
 						  "Pragma: public\r\n"

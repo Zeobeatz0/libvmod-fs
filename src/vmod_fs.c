@@ -196,7 +196,7 @@ void *client_thread(void *args) {
 		goto _fp_client_thread_exit;
 	}
 
-	sprintf(full, doc_headers, mime, r_tmp, size);
+	sprintf(full, doc_headers, mime, size);
 	send_full(sock, full, strlen(full));
 
 	while ((ret = fread(r_tmp, sizeof(char), 100, fp))) {
